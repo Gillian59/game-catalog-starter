@@ -105,6 +105,8 @@ export function addPlatform(name: string, slug: string): Platform {
   return platform;
 }
 
+
+
 export function removePlatform(platformSlug: string): void {
   const removedPlatform = PLATFORMS.find(
     (platform) => platform.slug === platformSlug

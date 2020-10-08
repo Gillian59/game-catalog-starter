@@ -23,42 +23,53 @@ export function makeApp(db: Db): core.Express {
   const app = express();
   const jsonParser = bodyParser.json();
 
-  app.get("/platforms", (request: Request, response: Response) => {
-    const platforms = getPlatforms();
-    response.json(platforms);
+  app.get("/platforms", async (request: Request, response: Response) => {
+    const platformList = await db.collection("platforms").find().toArray();
+    response.json(platformList);
   });
-
-  app.get("/platforms/:slug", (request: Request, response: Response) => {
-    const platform = findPlatform(request.params.slug);
+  app.get("/platforms/:slug", async (request: Request, response: Response) => {
+    const platform = await db
+      .collection("platforms")
+      .findOne({ slug: request.params.slug });
     if (platform) {
       response.json(platform);
     } else {
       response.status(404).end();
     }
   });
-
-  app.post("/platforms", jsonParser, (request: Request, response: Response) => {
-    const errors = [];
-    if (!request.body.name) {
-      errors.push("name");
+  app.post(
+    "/platforms",
+    jsonParser,
+    async (request: Request, response: Response) => {
+      const errors = [];
+      if (!request.body.name) {
+        errors.push("name");
+      }
+      if (errors.length > 0) {
+        return response
+          .status(400)
+          .json({ error: "Missing required fields", missing: errors });
+      }
+      const platform = await db
+        .collection("platforms")
+        .findOne({ name: request.body.name });
+      if (platform) {
+        return response
+          .status(400)
+          .json({ error: "A platform of this name already exists" });
+      }
+      const slug = slugify(request.body.name); // "Final Fantasy" => "final-fantasy"
+      const createdPlatform = {
+        name: request.body.name,
+        slug: slug,
+      };
+      db.collection("platforms")
+        .insertOne(createdPlatform)
+        .then(() => {
+          response.status(201).json(createdPlatform);
+        });
     }
-    if (errors.length > 0) {
-      return response
-        .status(400)
-        .json({ error: "Missing required fields", missing: errors });
-    }
-
-    if (findPlatformByName(request.body.name)) {
-      return response
-        .status(400)
-        .json({ error: "A platform of this name already exists" });
-    }
-
-    const slug = slugify(request.body.name);
-    const createdPlatform = addPlatform(request.body.name, slug);
-
-    response.status(201).json(createdPlatform);
-  });
+  );
 
   app.put(
     "/platforms/:slug",
@@ -74,15 +85,19 @@ export function makeApp(db: Db): core.Express {
           .json({ error: "Missing required fields", missing: errors });
       }
 
-      const platform = findPlatform(request.params.slug);
-      if (platform) {
-        const newPlatform = { ...platform, ...request.body };
-        updatePlatform(platform.slug, newPlatform);
 
-        response.status(204).end();
-      } else {
-        response.status(404).end();
-      }
+      db.collection("platforms").insertOne({name: request.body.name})
+      
+
+      // const platform = findPlatform(request.params.slug);
+      // if (platform) {
+      //   const newPlatform = { ...platform, ...request.body };
+      //   updatePlatform(platform.slug, newPlatform);
+
+      //   response.status(204).end();
+      // } else {
+      //   response.status(404).end();
+      // }
     }
   );
 
