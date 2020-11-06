@@ -86,7 +86,7 @@ export function makeApp(db: Db): core.Express {
       }
 
 
-      db.collection("platforms").insertOne({name: request.body.name})
+      //db.collection("platforms").insertOne({name: request.body.name})
       
 
       // const platform = findPlatform(request.params.slug);
